@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>DnD Damage Calculator</title>
+    <style>
+    </style>
+</head>
+
+<body>
+    <div>Attacks</div>
+    <span>To Hit Modifer:<input type="number" id="hitmod" value="0">&nbsp;Damage:<input type="text" id="damageAttack" value="2d6 + 5">&nbsp;Enemy AC:<input type="number" id="eac" value="10"></span>
+    <br>
+    <Label for="rollMod">Roll Modifier</Label>
+    <select id="rollMod">
+        <option value=1>Normal</option>
+        <option value=2>Advantage</option>
+        <option value=3>Triple Advantage</option>
+        <option value=-1>Disadvantage</option>
+    </select>
+    <br>
+    <button onclick="calc()">Calc</button>
+    <br>
+    <!-- Dpa is Damage Per Attack -->
+    <div>Average Damage Per This Attack = <span id="avgDpa"></span></div>
+    <br>
+    HitChance = 
+    <span id="displayHitChance"></span>
+    <br>
+    <br>
+    Needed roll = 
+    <span id="displayNeededRoll"></span>
+    <br>
+    <br>
+    <div>Number of Attacks:<input type="number" id="numAttacks" value="1"></div>
+    <br>
+    Average Damage Per Round = 
+    <span id="avgDpr"></span>
+    <br>
+    <br>
+    --------------------------------------------------------------------------------------
+    <br>
+    <div>AOE</div>
+    <div>Damage:<input type="text" id="damageAOE" value="8d6">&nbsp;Enemy chance to fail (as a decimal):<input type="number" id="failChance" value="0.5"></div>
+    <button onclick="calc()">Calc</button>
+    <br>
+    <div>Average Damage on one enemy = <span id="oneEnemyDamage"></span></div>
+    <br>
+    <br>
+    <div>Number of Enemies:<input type="number" id="numEnemies" value="1"></div>
+    <br>
+    Total Average Damage = <span id="totalAOEDamage"></span>
+
+</body>
+
+</html>
+
+<script>
+    function calc() {
+        calcAttacks();
+        calcAOE();
+    }
+
+    //TODO (for both) things that raise dice floor (ie Elemental Adept)
+
+    function calcAttacks(){
+        // to hit modifier
+        let hitMod = document.getElementById('hitmod').value;
+        // damage on hit
+        let damageStringInput = document.getElementById('damageAttack').value;
+        // Enemy Armour Class
+        let eac = document.getElementById('eac').value;
+        // eac - hitmod = number that needs to be rolled on th d20
+        let neededRoll = eac - hitMod;
+        // chance to hit enemy expressed as a decimal
+        // number that needs to be rolled / 20 = chance of hitting
+        let hitChance = 0;
+        let critChance = 0;
+
+        //TODO add critOn number for things like hexblade and champion
+
+        //TODO add additional crit dice for things like orc and barbarian brutal critical
+
+        // if eac < hitmod then you will always hit, except for a natural 1
+        if (neededRoll <= 1){
+            neededRoll = 1;
+            //hitChance = 0.95;
+        }
+        else if (neededRoll >= 20){
+            //hitChance = 0.05;
+            //critChance = 0.05;
+            neededRoll = 20;
+        }
+
+        // "Preloading" advantage and disadvantage numbers 
+        // The 0s at [0] are just there to fill the spot, they should never be used
+        // TODO I might only need to store this once, for dis just go 1 - aAdvantage[]
+        let aAdvantage = [0, 1, 0.9975, 0.9900000000000001, 0.9775000000000001, 0.9600000000000001, 0.9375000000000001, 0.9100000000000001, 0.8775000000000001, 0.8400000000000001, 0.7975000000000001, 0.7500000000000001, 0.6975000000000001, 0.6400000000000001, 0.5775000000000001, 0.51, 0.4375, 0.36, 0.27749999999999997, 0.19, 0.0975]
+        let aDisadvantage = [0, 1, 0.9025000000000001, 0.81, 0.7225, 0.64, 0.5625, 0.49, 0.4225, 0.36, 0.3025, 0.25, 0.2025, 0.16, 0.1225, 0.09, 0.0625, 0.04, 0.0225, 0.01, 0.0025]
+        // advantage
+
+        // TODO assign
+        // TODO calculate for higher rerolls
+        let rollMod = document.getElementById("rollMod").value;
+
+        if (rollMod == 1){
+            //normal
+            // The *100 /100 is neccessary because of how JS does math
+            // https://medium.com/@devinred/weird-math-in-javascript-2379ad151d09
+            hitChance = ((0.95*100) - ((neededRoll / 20)*100))/100;
+            //TODO change
+            critChance = 0.05;
+        }
+        else if (rollMod == 2){
+            hitChance = aAdvantage[neededRoll];
+            
+            //chance of 20 according to our array
+            //TODO change
+            critChance = 0.0975
+        }
+        else if (rollMod == -1){
+            hitChance = aDisadvantage[neededRoll];
+
+            //chance of 20 according to our array
+            critChance = 0.0025
+        }
+        //TODO revise
+        else if (rollMod == 3){
+            hitChance = oddAdvantage(neededRoll);
+
+            //TODO incorporate "crit on"
+            //This part might not be right
+            critChance = oddAdvantage(20)
+        }
+        else {
+            // the heck you mean "maybe"?
+            hitChance = "idk 15 maybe 37";
+        }
+        
+        document.getElementById("displayHitChance").innerHTML = hitChance;
+        document.getElementById("displayNeededRoll").innerHTML = neededRoll;
+
+        // TODO there is a 1/20 chance(usually) of natural 20 where damage dice is doubled
+        //      Will require seperating damage dice and damage constants
+        let avgDmgOnHit = 0;
+        //TODO change obviously
+        //avgDmgOnHit = damageStringInput;
+
+        let avgDiceDmg = 0;
+        // remove spaces
+        // TODO replace with " " with regex to get all kinds of spaces
+        //console.log(damageStringInput)
+        damageStringInput = damageStringInput.replaceAll(" ", "");
+        //console.log(damageStringInput)
+        damageStringInput = damageStringInput.toLowerCase();
+        //console.log(damageStringInput)
+
+        // TODO get conisitent variable names
+        let arrDmg = damageStringInput.split("+");
+        //console.log(arrDmg)
+
+        //TODO could be a seperate function
+        //calcates damage coming from the dice
+        // loop through arrDmg
+        for (let i = 0; i < arrDmg.length; i++) {
+            
+            // if contains "d", parse and add to avgDiceDmg AND avgDmgOnHit
+            // TODO add weapon dice rerolls options
+            if (arrDmg[i].includes("d")) {
+                let quantAndType = arrDmg[i].split("d");
+                avgDiceDmg += Number(quantAndType[0]) * Number(((quantAndType[1]/2) + 0.5))
+            }
+            else {
+                avgDmgOnHit += Number(arrDmg[i]);
+            }
+        }
+        // TODO add crit
+        //let finalAvgDmg = avgDmgOnHit
+        avgDmgOnHit += Number(avgDiceDmg);
+        //TODO change
+        avgDmgOnHit += Number(avgDiceDmg * critChance)
+
+        console.log(avgDiceDmg);
+        console.log(avgDmgOnHit);
+
+        //Dpa is Damage Per Attack
+        document.getElementById("avgDpa").innerHTML = Number(avgDmgOnHit) * Number(hitChance);
+
+        let numAttacks = document.getElementById('numAttacks').value;
+        document.getElementById("avgDpr").innerHTML = (Number(avgDmgOnHit) * Number(hitChance)) * Number(numAttacks);
+    }
+
+    function calcAOE(){
+
+        let damageAOEStringInput = document.getElementById('damageAOE').value;
+        // chance to fail (as a decimal)
+        let failChance = document.getElementById('failChance').value;
+        let avgDiceDmg = 0;
+        // TODO get conisitent variable names
+        let arrDmg = damageAOEStringInput.split("+");
+        //console.log(arrDmg)
+
+        //TODO could be a seperate function
+        //calcates damage coming from the dice
+        // loop through arrDmg
+        for (let i = 0; i < arrDmg.length; i++) {
+            
+            // if contains "d", parse and add to avgDiceDmg AND avgDmgOnHit
+            // TODO add weapon dice rerolls options
+            if (arrDmg[i].includes("d")) {
+                let quantAndType = arrDmg[i].split("d");
+                avgDiceDmg += Number(quantAndType[0]) * Number(((quantAndType[1]/2) + 0.5))
+            }
+        }
+
+        let oneEnemyDamage = Number(avgDiceDmg/2) + Number((avgDiceDmg/2) * failChance);
+        document.getElementById("oneEnemyDamage").innerHTML = oneEnemyDamage;
+        let numEnemies = document.getElementById('numEnemies').value;
+        document.getElementById("totalAOEDamage").innerHTML = oneEnemyDamage * numEnemies;
+    }
+
+    function oddAdvantage(neededRoll){
+        let totalChance = 0;
+        for (let i = neededRoll; i <= 20; i++)
+        {
+            totalChance += (((3*i)*(i-1))+1) / 8000;
+        }
+        //number of combonations out of 400 that are equal to or greater than neededRoll
+        return totalChance;
+    }
+
+</script>
