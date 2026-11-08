@@ -9,16 +9,22 @@ const MAX_D12_ROLL: u32 = 12;
 const MAX_D20_ROLL: u32 = 20;
 const MAX_D100_ROLL: u32 = 100;
 const ENABLE_DEBUG: bool = true;
+const NATURAL_EXCEPTIONS: bool = false;
 
 fn main() {
     //println!("Roll result is {}", roll_die());
-    let enemy_ac: u32 = 17;
-    let hit_mod: u32 = 15;
+    let enemy_ac: u32 = 2;
+    let hit_mod: u32 = 0;
 
-    let single_die_roll =
-        calculate_single_dice_hit_chance(enemy_ac, hit_mod, MIN_DICE_ROLL, MAX_D20_ROLL, true);
-    let advantage_layers: u32 = 0;
-    let disadvantage_layers: u32 = 1;
+    let single_die_roll = calculate_single_dice_hit_chance(
+        enemy_ac,
+        hit_mod,
+        MIN_DICE_ROLL,
+        MAX_D20_ROLL,
+        NATURAL_EXCEPTIONS,
+    );
+    let advantage_layers: u32 = 2;
+    let disadvantage_layers: u32 = 0;
 
     let check_chance = calculate_check(single_die_roll, advantage_layers, disadvantage_layers);
 
@@ -36,7 +42,7 @@ fn main() {
 - disadvantage layers {disadvantage_layers}
 -------------------------------------------------
 Chance is {}%",
-            ((check_chance * 10000.0).floor() / 100.0) // 2 decimal places
+            ((check_chance * 1000000.0).floor() / 10000.0) // 2 decimal places
         );
     }
 }
@@ -139,8 +145,8 @@ fn calculate_check(
     //  x - Chance with advantage
     //  y - Chance with single die
     //  z - Advantage layers
-    //  x = y ^ (1.0 / z + 1)
-    //  0.71 = 0.5 ^ (1.0 / 1 + 1)
+    //  x = 1 - (1 - y) ^ (z + 1)
+    //  0.998 = 1 - (1 - 0.95) ^ (1 + 1)
     // Disadvantage Ex - Power/exponent
     //  x - Chance with disadvantage
     //  y - Chance with single die
@@ -148,7 +154,7 @@ fn calculate_check(
     //  x = y ^ (z + 1)
     //  0.25 = 0.5 ^ (1 + 1)
     if advantage_layers > 0 {
-        calculated_chance = single_die_chance.powf(1.0 / ((advantage_layers + 1) as f32));
+        calculated_chance = 1.0 - (1.0 - single_die_chance).powf((advantage_layers + 1) as f32);
     } else if disadvantage_layers > 0 {
         calculated_chance = single_die_chance.powf((disadvantage_layers + 1) as f32);
     } else {
